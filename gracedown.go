@@ -31,6 +31,6 @@ func (srv *Server) Serve(l net.Listener) error {
 	return srv.Server.Serve(l)
 }
 
-func (srv *Server) Close() error {
-	return srv.Server.Close()
+func (srv *Server) Close() bool {
+	return false
 }
