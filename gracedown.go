@@ -47,8 +47,7 @@ func (srv *Server) Serve(l net.Listener) error {
 			srv.wg.Add(1)
 		case http.StateActive:
 		case http.StateIdle:
-		case http.StateHijacked:
-		case http.StateClosed:
+		case http.StateClosed, http.StateHijacked:
 			srv.wg.Done()
 		}
 		if originalConnState != nil {
