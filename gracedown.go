@@ -9,7 +9,7 @@ type Server struct {
 	Server *http.Server
 }
 
-func NewWithServer(s *http.Server) *GracefulServer {
+func NewWithServer(s *http.Server) *Server {
 	return &Server{
 		Server: s,
 	}
