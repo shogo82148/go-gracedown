@@ -30,3 +30,7 @@ func (srv *Server) ListenAndServe() error {
 func (srv *Server) Serve(l net.Listener) error {
 	return srv.Server.Serve(l)
 }
+
+func (srv *Server) Close() error {
+	return srv.Server.Close()
+}
