@@ -16,7 +16,7 @@ func NewWithServer(s *http.Server) *Server {
 }
 
 func (srv *Server) ListenAndServe() error {
-	addr := srv.Addr
+	addr := srv.Server.Addr
 	if addr == "" {
 		addr = ":http"
 	}
