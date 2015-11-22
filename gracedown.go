@@ -43,7 +43,7 @@ func (srv *Server) Serve(l net.Listener) error {
 	srv.mu.Unlock()
 	defer func() {
 		srv.mu.Lock()
-		delete(srv.listeners[l])
+		delete(srv.listeners, l)
 		srv.mu.Unlock()
 	}()
 
