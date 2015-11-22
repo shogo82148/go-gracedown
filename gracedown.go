@@ -10,16 +10,18 @@ import (
 type Server struct {
 	Server *http.Server
 
-	wg       sync.WaitGroup
-	mu       sync.Mutex
-	closed   int32 // accessed atomically.
-	idlePool map[net.Conn]struct{}
+	wg        sync.WaitGroup
+	mu        sync.Mutex
+	closed    int32 // accessed atomically.
+	idlePool  map[net.Conn]struct{}
+	listeners map[net.Listener]struct{}
 }
 
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
-		Server:   s,
-		idlePool: map[net.Conn]struct{}{},
+		Server:    s,
+		idlePool:  map[net.Conn]struct{}{},
+		listeners: map[net.Listener]struct{}{},
 	}
 }
 
@@ -36,6 +38,15 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func (srv *Server) Serve(l net.Listener) error {
+	srv.mu.Lock()
+	srv.listeners[l] = struct{}{}
+	srv.mu.Unlock()
+	defer func() {
+		srv.mu.Lock()
+		delete(srv.listeners[l])
+		srv.mu.Unlock()
+	}()
+
 	originalConnState := srv.Server.ConnState
 	srv.Server.ConnState = func(conn net.Conn, newState http.ConnState) {
 		srv.mu.Lock()
@@ -78,7 +89,13 @@ func (srv *Server) Serve(l net.Listener) error {
 func (srv *Server) Close() bool {
 	if atomic.CompareAndSwapInt32(&srv.closed, 0, 1) {
 		srv.Server.SetKeepAlivesEnabled(false)
-		l.Close()
+		srv.mu.Lock()
+		listeners := srv.listeners
+		srv.listeners = map[net.Listener]struct{}{}
+		srv.mu.Unlock()
+		for l := range srv.listeners {
+			l.Close()
+		}
 		return true
 	}
 	return false
