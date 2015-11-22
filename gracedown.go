@@ -3,11 +3,13 @@ package gracedown
 import (
 	"net"
 	"net/http"
+	"sync"
 )
 
 type Server struct {
 	Server *http.Server
 
+	wg        sync.WaitGroup
 	chanClose chan bool
 }
 
@@ -34,9 +36,26 @@ func (srv *Server) Serve(l net.Listener) error {
 	go func() {
 		srv.chanClose <- true
 		close(srv.chanClose)
+		s.Server.SetKeepAlivesEnabled(false)
 		l.Close()
 	}()
-	return srv.Server.Serve(l)
+
+	originalConnState := srv.Server.ConnState
+	s.ConnState = func(conn net.Conn, newState http.ConnState) {
+		switch newState {
+		case http.StateNew:
+			srv.wg.Add(1)
+		case http.StateActive:
+		case http.StateIdle:
+		case http.StateHijacked:
+		case http.StateClosed:
+			srv.wg.Done()
+		}
+	}
+
+	err := srv.Server.Serve(l)
+	srv.wg.Wait()
+	return err
 }
 
 func (srv *Server) Close() bool {
