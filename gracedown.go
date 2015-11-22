@@ -4,15 +4,16 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 )
 
 type Server struct {
 	Server *http.Server
 
-	wg        sync.WaitGroup
-	mu        sync.Mutex
-	chanClose chan bool
-	idlePool  map[net.Conn]struct{}
+	wg       sync.WaitGroup
+	mu       sync.Mutex
+	closed   int32 // accessed atomically.
+	idlePool map[net.Conn]struct{}
 }
 
 func NewWithServer(s *http.Server) *Server {
@@ -36,13 +37,6 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func (srv *Server) Serve(l net.Listener) error {
-	go func() {
-		srv.chanClose <- true
-		close(srv.chanClose)
-		srv.Server.SetKeepAlivesEnabled(false)
-		l.Close()
-	}()
-
 	originalConnState := srv.Server.ConnState
 	srv.Server.ConnState = func(conn net.Conn, newState http.ConnState) {
 		srv.mu.Lock()
@@ -74,10 +68,19 @@ func (srv *Server) Serve(l net.Listener) error {
 
 	// wait all connections have done
 	srv.wg.Wait()
+
+	if atomic.LoadInt32(&srv.closed) != nil {
+		// ignore closed network error when srv.Close() is called
+		return nil
+	}
 	return err
 }
 
 func (srv *Server) Close() bool {
-	ret := <-srv.chanClose
-	return ret
+	if atomic.CompareAndSwapInt32(&srv.closed, 0, 1) {
+		srv.Server.SetKeepAlivesEnabled(false)
+		l.Close()
+		return true
+	}
+	return false
 }
