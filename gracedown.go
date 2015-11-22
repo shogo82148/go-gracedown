@@ -10,13 +10,16 @@ type Server struct {
 	Server *http.Server
 
 	wg        sync.WaitGroup
+	mu        sync.Mutex
 	chanClose chan bool
+	idlePool  map[net.Conn]struct{}
 }
 
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
 		Server:    s,
 		chanClose: make(chan bool),
+		idlePool:  map[net.Conn]struct{}{},
 	}
 }
 
@@ -42,20 +45,34 @@ func (srv *Server) Serve(l net.Listener) error {
 
 	originalConnState := srv.Server.ConnState
 	srv.Server.ConnState = func(conn net.Conn, newState http.ConnState) {
+		srv.mu.Lock()
 		switch newState {
 		case http.StateNew:
 			srv.wg.Add(1)
 		case http.StateActive:
+			delete(srv.idlePool, conn)
 		case http.StateIdle:
+			srv.idlePool[conn] = struct{}{}
 		case http.StateClosed, http.StateHijacked:
+			delete(srv.idlePool, conn)
 			srv.wg.Done()
 		}
+		srv.mu.Unlock()
 		if originalConnState != nil {
 			originalConnState(conn, newState)
 		}
 	}
 
 	err := srv.Server.Serve(l)
+
+	// close all idle connections
+	srv.mu.Lock()
+	for conn := range srv.idlePool {
+		conn.Close()
+	}
+	srv.mu.Unlock()
+
+	// wait all connections have done
 	srv.wg.Wait()
 	return err
 }
