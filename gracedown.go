@@ -68,7 +68,7 @@ func (srv *Server) Serve(l net.Listener) error {
 	// wait all connections have done
 	srv.wg.Wait()
 
-	if atomic.LoadInt32(&srv.closed) != nil {
+	if atomic.LoadInt32(&srv.closed) != 0 {
 		// ignore closed network error when srv.Close() is called
 		return nil
 	}
