@@ -18,9 +18,8 @@ type Server struct {
 
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
-		Server:    s,
-		chanClose: make(chan bool),
-		idlePool:  map[net.Conn]struct{}{},
+		Server:   s,
+		idlePool: map[net.Conn]struct{}{},
 	}
 }
 
