@@ -7,11 +7,14 @@ import (
 
 type Server struct {
 	Server *http.Server
+
+	chanClose chan bool
 }
 
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
-		Server: s,
+		Server:    s,
+		chanClose: make(chan bool),
 	}
 }
 
@@ -28,9 +31,15 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func (srv *Server) Serve(l net.Listener) error {
+	go func() {
+		srv.chanClose <- true
+		close(srv.chanClose)
+		l.Close()
+	}()
 	return srv.Server.Serve(l)
 }
 
 func (srv *Server) Close() bool {
-	return false
+	ret := <-srv.chanClose
+	return ret
 }
