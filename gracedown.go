@@ -93,7 +93,7 @@ func (srv *Server) Close() bool {
 		listeners := srv.listeners
 		srv.listeners = map[net.Listener]struct{}{}
 		srv.mu.Unlock()
-		for l := range srv.listeners {
+		for l := range listeners {
 			l.Close()
 		}
 		return true
