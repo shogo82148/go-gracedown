@@ -41,7 +41,7 @@ func (srv *Server) Serve(l net.Listener) error {
 	}()
 
 	originalConnState := srv.Server.ConnState
-	s.ConnState = func(conn net.Conn, newState http.ConnState) {
+	srv.ConnState = func(conn net.Conn, newState http.ConnState) {
 		switch newState {
 		case http.StateNew:
 			srv.wg.Add(1)
@@ -50,6 +50,9 @@ func (srv *Server) Serve(l net.Listener) error {
 		case http.StateHijacked:
 		case http.StateClosed:
 			srv.wg.Done()
+		}
+		if originalConnState != nil {
+			originalConnState(conn, newState)
 		}
 	}
 
