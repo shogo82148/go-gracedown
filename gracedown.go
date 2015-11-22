@@ -36,12 +36,12 @@ func (srv *Server) Serve(l net.Listener) error {
 	go func() {
 		srv.chanClose <- true
 		close(srv.chanClose)
-		s.Server.SetKeepAlivesEnabled(false)
+		srv.Server.SetKeepAlivesEnabled(false)
 		l.Close()
 	}()
 
 	originalConnState := srv.Server.ConnState
-	srv.ConnState = func(conn net.Conn, newState http.ConnState) {
+	srv.Server.ConnState = func(conn net.Conn, newState http.ConnState) {
 		switch newState {
 		case http.StateNew:
 			srv.wg.Add(1)
