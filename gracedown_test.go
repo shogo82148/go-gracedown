@@ -84,7 +84,7 @@ func TestShutdown_NoKeepAlive(t *testing.T) {
 
 	// second request will be failure, because the server starts shutting down process
 	_, err := client.Get(url)
-	t.Log("request 2nd GET: %v", err)
+	t.Logf("request 2nd GET: %v", err)
 	if err == nil {
 		t.Errorf("want some error, but not")
 	}
