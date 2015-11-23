@@ -48,7 +48,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		addr = ":https"
 	}
 	config := &tls.Config{}
-	if s.TLSConfig != nil {
+	if srv.TLSConfig != nil {
 		*config = *srv.TLSConfig
 	}
 	if config.NextProtos == nil {
