@@ -10,11 +10,13 @@ import (
 type Server struct {
 	Server *http.Server
 
-	wg        sync.WaitGroup
-	mu        sync.Mutex
-	closed    int32 // accessed atomically.
-	idlePool  map[net.Conn]struct{}
-	listeners map[net.Listener]struct{}
+	wg                sync.WaitGroup
+	mu                sync.Mutex
+	originalConnState func(conn net.Conn, newState http.ConnState)
+	connStateOnce     sync.Once
+	closed            int32 // accessed atomically.
+	idlePool          map[net.Conn]struct{}
+	listeners         map[net.Listener]struct{}
 }
 
 func NewWithServer(s *http.Server) *Server {
@@ -38,6 +40,7 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func (srv *Server) Serve(l net.Listener) error {
+	// remember net.Listener
 	srv.mu.Lock()
 	srv.listeners[l] = struct{}{}
 	srv.mu.Unlock()
@@ -47,25 +50,11 @@ func (srv *Server) Serve(l net.Listener) error {
 		srv.mu.Unlock()
 	}()
 
-	originalConnState := srv.Server.ConnState
-	srv.Server.ConnState = func(conn net.Conn, newState http.ConnState) {
-		srv.mu.Lock()
-		switch newState {
-		case http.StateNew:
-			srv.wg.Add(1)
-		case http.StateActive:
-			delete(srv.idlePool, conn)
-		case http.StateIdle:
-			srv.idlePool[conn] = struct{}{}
-		case http.StateClosed, http.StateHijacked:
-			delete(srv.idlePool, conn)
-			srv.wg.Done()
-		}
-		srv.mu.Unlock()
-		if originalConnState != nil {
-			originalConnState(conn, newState)
-		}
-	}
+	// replace ConnState
+	srv.connStateOnce.Do(func() {
+		srv.originalConnState = srv.Server.ConnState
+		srv.Server.ConnState = srv.connState
+	})
 
 	err := srv.Server.Serve(l)
 
@@ -99,4 +88,23 @@ func (srv *Server) Close() bool {
 		return true
 	}
 	return false
+}
+
+func (srv *Server) connState(conn net.Conn, newState http.ConnState) {
+	srv.mu.Lock()
+	switch newState {
+	case http.StateNew:
+		srv.wg.Add(1)
+	case http.StateActive:
+		delete(srv.idlePool, conn)
+	case http.StateIdle:
+		srv.idlePool[conn] = struct{}{}
+	case http.StateClosed, http.StateHijacked:
+		delete(srv.idlePool, conn)
+		srv.wg.Done()
+	}
+	srv.mu.Unlock()
+	if srv.originalConnState != nil {
+		originalConnState(conn, newState)
+	}
 }
