@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Server struct {
@@ -89,12 +90,17 @@ func (srv *Server) Serve(l net.Listener) error {
 
 	err := srv.Server.Serve(l)
 
-	// close all idle connections
-	srv.mu.Lock()
-	for conn := range srv.idlePool {
-		conn.Close()
-	}
-	srv.mu.Unlock()
+	go func() {
+		// wait for closing keep-alive connection by sending `Connection: Close` header.
+		time.Sleep(10 * time.Second)
+
+		// time out, close all idle connections
+		srv.mu.Lock()
+		for conn := range srv.idlePool {
+			conn.Close()
+		}
+		srv.mu.Unlock()
+	}()
 
 	// wait all connections have done
 	srv.wg.Wait()
