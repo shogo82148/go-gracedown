@@ -120,3 +120,55 @@ func TestShutdown_NoKeepAlive(t *testing.T) {
 		t.Errorf("timeout")
 	}
 }
+
+func TestShutdown_KeepAlive(t *testing.T) {
+	// prepare test server
+	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	})
+	ts := NewWithServer(&http.Server{
+		Handler: handler,
+	})
+
+	// start server
+	l := newLocalListener()
+	go func() {
+		ts.Serve(l)
+	}()
+	url := "http://" + l.Addr().String()
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 5 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			DisableKeepAlives:   false, // keep-alives are ENABLE!!
+			MaxIdleConnsPerHost: 1,
+		},
+	}
+
+	// 1st request will be success
+	resp, err := client.Get(url)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	resp.Body.Close()
+
+	// start shutting down process
+	ts.Close()
+
+	// 2nd request will be success, because this request uses the Keep-Alive connection
+	resp, err = client.Get(url)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	resp.Body.Close()
+
+	// 3rd request will be success, because the Keep-Alive connection is closed by the server
+	resp, err = client.Get(url)
+	if err == nil {
+		t.Error("want error, not not")
+	}
+}
