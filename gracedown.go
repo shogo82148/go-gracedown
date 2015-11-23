@@ -136,6 +136,6 @@ func (srv *Server) connState(conn net.Conn, newState http.ConnState) {
 	}
 	srv.mu.Unlock()
 	if srv.originalConnState != nil {
-		originalConnState(conn, newState)
+		srv.originalConnState(conn, newState)
 	}
 }
