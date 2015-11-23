@@ -1,6 +1,7 @@
 package gracedown
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 	"sync"
@@ -8,7 +9,7 @@ import (
 )
 
 type Server struct {
-	Server *http.Server
+	*http.Server
 
 	wg                sync.WaitGroup
 	mu                sync.Mutex
@@ -37,6 +38,36 @@ func (srv *Server) ListenAndServe() error {
 		return err
 	}
 	return srv.Serve(ln)
+}
+
+// ListenAndServeTLS provides a graceful equivalent of net/http.Serve.ListenAndServeTLS
+func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+	// direct lift from net/http/server.go
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":https"
+	}
+	config := &tls.Config{}
+	if s.TLSConfig != nil {
+		*config = *srv.TLSConfig
+	}
+	if config.NextProtos == nil {
+		config.NextProtos = []string{"http/1.1"}
+	}
+
+	var err error
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return err
+	}
+
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	return srv.Serve(tls.NewListener(ln, config))
 }
 
 func (srv *Server) Serve(l net.Listener) error {
