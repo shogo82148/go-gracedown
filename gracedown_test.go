@@ -166,7 +166,7 @@ func TestShutdown_KeepAlive(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	// 3rd request will be success, because the Keep-Alive connection is closed by the server
+	// 3rd request will be failure, because the Keep-Alive connection is closed
 	resp, err = client.Get(url)
 	if err == nil {
 		t.Error("want error, not not")
