@@ -12,6 +12,8 @@ import (
 type Server struct {
 	*http.Server
 
+	KillTimeOut time.Duration
+
 	wg                sync.WaitGroup
 	mu                sync.Mutex
 	originalConnState func(conn net.Conn, newState http.ConnState)
@@ -23,9 +25,10 @@ type Server struct {
 
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
-		Server:    s,
-		idlePool:  map[net.Conn]struct{}{},
-		listeners: map[net.Listener]struct{}{},
+		Server:      s,
+		KillTimeOut: 10 * time.Second,
+		idlePool:    map[net.Conn]struct{}{},
+		listeners:   map[net.Listener]struct{}{},
 	}
 }
 
@@ -92,7 +95,7 @@ func (srv *Server) Serve(l net.Listener) error {
 
 	go func() {
 		// wait for closing keep-alive connection by sending `Connection: Close` header.
-		time.Sleep(10 * time.Second)
+		time.Sleep(srv.KillTimeOut)
 
 		// time out, close all idle connections
 		srv.mu.Lock()
