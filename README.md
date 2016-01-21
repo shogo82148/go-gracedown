@@ -6,9 +6,23 @@ Package go-gracedown provides a library that makes it easy to build a HTTP serve
 ## SYNOPSIS
 
 ``` go
-import "github.com/shogo82148/go-gracedown"
+import (
+  "os"
+  "os/signal"
+
+  "github.com/shogo82148/go-gracedown"
+)
 
 func main() {
+  go func() {
+    for {
+      s := <-signal_chan
+        if s == syscall.SIGTERM {
+          gracedown.Close() // trigger graceful shutdown
+        }
+    }
+  }()
+
   handler := MyHTTPHandler()
   gracedown.ListenAndServe(":7000", handler)
 }
