@@ -28,6 +28,10 @@ func main() {
 }
 ```
 
+## GODOC
+
+See [godoc](https://godoc.org/github.com/shogo82148/go-gracedown) for more information.
+
 ## SEE ALSO
 
 - Manners https://github.com/braintree/manners
