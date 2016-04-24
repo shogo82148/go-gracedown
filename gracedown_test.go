@@ -73,7 +73,7 @@ func TestShutdown_NoKeepAlive(t *testing.T) {
 	}()
 
 	// close server
-	<-chHandlerRequest // wait for recieving the request...
+	<-chHandlerRequest // wait for receiving the request...
 	t.Log("call sever.Close()")
 	if ts.Close() != true {
 		t.Errorf("first call to Close returned false")
