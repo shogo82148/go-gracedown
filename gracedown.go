@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Server provides a graceful equivalent of net/http.Server.
 type Server struct {
 	*http.Server
 
@@ -23,6 +24,7 @@ type Server struct {
 	listeners         map[net.Listener]struct{}
 }
 
+// NewWithServer wraps an existing http.Server.
 func NewWithServer(s *http.Server) *Server {
 	return &Server{
 		Server:      s,
@@ -32,6 +34,7 @@ func NewWithServer(s *http.Server) *Server {
 	}
 }
 
+// ListenAndServe provides a graceful equivalent of net/http.Server.ListenAndServe
 func (srv *Server) ListenAndServe() error {
 	addr := srv.Server.Addr
 	if addr == "" {
@@ -44,7 +47,7 @@ func (srv *Server) ListenAndServe() error {
 	return srv.Serve(ln)
 }
 
-// ListenAndServeTLS provides a graceful equivalent of net/http.Serve.ListenAndServeTLS
+// ListenAndServeTLS provides a graceful equivalent of net/http.Server.ListenAndServeTLS
 func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	// direct lift from net/http/server.go
 	addr := srv.Addr
@@ -74,6 +77,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	return srv.Serve(tls.NewListener(ln, config))
 }
 
+// Serve provides a graceful equivalent of net/http.Server.Serve
 func (srv *Server) Serve(l net.Listener) error {
 	// remember net.Listener
 	srv.mu.Lock()
@@ -115,6 +119,8 @@ func (srv *Server) Serve(l net.Listener) error {
 	return err
 }
 
+// Close shuts down the default server used by ListenAndServe, ListenAndServeTLS and
+// Serve. It returns true if it's the first time Close is called.
 func (srv *Server) Close() bool {
 	if atomic.CompareAndSwapInt32(&srv.closed, 0, 1) {
 		srv.Server.SetKeepAlivesEnabled(false)
