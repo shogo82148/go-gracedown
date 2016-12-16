@@ -81,6 +81,7 @@ func TestShutdown_NoKeepAlive(t *testing.T) {
 	if ts.Close() != false {
 		t.Fatal("second call to Close returned true")
 	}
+	time.Sleep(1 * time.Second) // make sure closing the test server has started
 
 	// second request will be failure, because the server starts shutting down process
 	_, err := client.Get(url)

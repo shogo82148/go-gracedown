@@ -47,6 +47,7 @@ func TestShutdown_KeepAlive(t *testing.T) {
 
 	// start shutting down process
 	ts.Close()
+	time.Sleep(1 * time.Second) // make sure closing the test server has started
 
 	// 2nd request will be success, because this request uses the Keep-Alive connection
 	resp, err = client.Get(url)
@@ -103,6 +104,7 @@ func TestShutdown_KillKeepAlive(t *testing.T) {
 	// start shutting down process
 	start := time.Now()
 	ts.Close()
+	time.Sleep(1 * time.Second) // make sure closing the test server has started
 
 	select {
 	case err := <-done:
