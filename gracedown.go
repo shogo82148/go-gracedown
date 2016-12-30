@@ -34,7 +34,7 @@ func (srv *Server) Serve(l net.Listener) error {
 	err := srv.Server.Serve(l)
 
 	// Wait for closing all connections.
-	if err == http.ErrServerClosed {
+	if err == http.ErrServerClosed && atomic.LoadInt32(&srv.closed) != 0 {
 		ch := srv.getDoneChan()
 		<-ch
 		return nil
