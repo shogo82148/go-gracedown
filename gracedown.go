@@ -77,6 +77,10 @@ func (srv *Server) Close() bool {
 	// immediately closes all connection.
 	if srv.KillTimeOut == 0 {
 		srv.Server.Close()
+
+		srv.mu.Lock()
+		defer srv.mu.Unlock()
+		srv.closeDoneChanLocked()
 		return true
 	}
 
