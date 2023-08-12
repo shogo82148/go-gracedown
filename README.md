@@ -3,6 +3,11 @@ go-gracedown
 
 Package go-gracedown provides a library that makes it easy to build a HTTP server that can be shutdown gracefully (that is, without dropping any connections).
 
+## ARCHIVED!
+
+This project is no longer maintained.
+Use https://pkg.go.dev/net/http#Server.Shutdown instead it.
+
 ## SYNOPSIS
 
 ``` go
